@@ -1,4 +1,4 @@
-package Lab2;
+package Lab3;
 
 import java.lang.Math;
 
@@ -9,7 +9,7 @@ public class Polinomials {
 
     public static double chebisheva(double x, int power){
         if (power == 0)
-            return 0.5;
+            return Math.log(1.5);
         else
         {
             if (power == 1)
@@ -21,7 +21,7 @@ public class Polinomials {
 
     public static double lezh(double x, int pow) {
         if (pow == 0)
-            return 1;
+            return Math.log(1.5);
         else
         {
             if (pow == 1)
@@ -33,25 +33,25 @@ public class Polinomials {
 
     public static double lager(double x, int pow) {
         if (pow == 0)
-            return 1;
+            return Math.log(1.5);
         else
         {
             if (pow == 1)
                 return -x + 1;
             else
-                return (2 * (pow - 1) + 1 - x) * lager(x, pow - 1) - Math.pow((pow - 1), 2) * lager(x, pow - 2);
+                return ((2 * (pow - 1) + 1 - x) * lager(x, pow - 1) - (pow - 1) * lager(x, pow - 2))/(pow);
         }
     }
 
     public static double ermit(double x, int pow) {
         if (pow == 0)
-            return 1;
+            return Math.log(1.5);
         else
         {
             if (pow == 1)
                 return 2 * x;
             else
-                return 2 * x * ermit(x, pow - 1) - 2 * ermit(x, pow - 2);
+                return 2 * x * ermit(x, pow - 1) - 2 *(pow-1)* ermit(x, pow - 2);
         }
     }
 

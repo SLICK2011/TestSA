@@ -1,4 +1,4 @@
-package Lab2;
+package Lab3;
 
 import Jama.Matrix;
 
@@ -24,7 +24,6 @@ public class Solution implements Runnable {
     private int polinomType;
     private boolean flag;
     private double maxError = 100.0;
-    private boolean inverseGood = true;
 
 
     public double getMaxError() {
@@ -86,6 +85,14 @@ public class Solution implements Runnable {
 
     @Override
     public void run() {
+        int maxPowerSize;
+        if ((powerX1*sizeX1>=powerX2*sizeX2)&&(powerX1*sizeX1>=powerX3*sizeX3))
+            maxPowerSize = (powerX1+1)*sizeX1;
+        else if ((powerX2*sizeX2>=powerX1*sizeX1)&&(powerX2*sizeX2>=powerX3*sizeX3))
+            maxPowerSize = (powerX2+1)*sizeX2;
+        else
+            maxPowerSize = (powerX3+1)*sizeX3;
+
         double[][] matrixToOls;
         StringBuilder sbForInterimResult = new StringBuilder();
         StringBuilder sbForFinalResult = new StringBuilder();
@@ -94,13 +101,14 @@ public class Solution implements Runnable {
 
         //Нахождение лямбда 2 способом (3 системы для каждой лямбда)
         //lambda1
+
         matrixToOls = new double[normaX.getRowDimension()][sizeX1*(powerX1+1)];
         int interval = powerX1+1;
         int count = 0;
         int currentX = 0;
         for (int i=0;i<matrixToOls.length;i++){
             for (int j=0;j<(powerX1+1)*sizeX1;j++){
-                matrixToOls[i][j] = Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX),count);
+                matrixToOls[i][j] = Math.log(1.0+Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX),count));
                 count++;
                 if (count == interval) {
                     count = 0;
@@ -109,12 +117,13 @@ public class Solution implements Runnable {
             }
             currentX = 0;
         }
-        Matrix lambda1X = new Matrix(matrixToOls);
-        for (int i=0;i<lambda1X.getRowDimension();i++){
-            lambda1X.set(i,0,lambda1X.get(i,0)+1e-7);
+        Matrix lambdaX = new Matrix(matrixToOls);
+        Matrix lambdaY = new Matrix(normaY.getRowDimension(),normaY.getColumnDimension());
+        for (int i=0;i<lambdaY.getRowDimension();i++){
+            lambdaY.set(i,0,Math.log(normaY.get(i,0)+1.0));
         }
         try {
-            lambda1 = MyMath.ordLeastSquares(lambda1X,normaY);
+            lambda1 = MyMath.ordLeastSquares(lambdaX,lambdaY);
         }catch (RuntimeException e){
             e.printStackTrace();
             return;
@@ -136,7 +145,7 @@ public class Solution implements Runnable {
         currentX = sizeX1;
         for (int i=0;i<matrixToOls.length;i++){
             for (int j=0;j<(powerX2+1)*sizeX2;j++){
-                matrixToOls[i][j] = Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX),count);
+                matrixToOls[i][j] = Math.log(1+Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX),count));
                 count++;
                 if (count == interval) {
                     count = 0;
@@ -145,17 +154,13 @@ public class Solution implements Runnable {
             }
             currentX = sizeX1;
         }
-        Matrix lambda2X = new Matrix(matrixToOls);
-        for (int i=0;i<lambda2X.getRowDimension();i++){
-            lambda2X.set(i,0,lambda2X.get(i,0)+1e-7);
-        }
+        lambdaX = new Matrix(matrixToOls);
         try {
-            lambda2 = MyMath.ordLeastSquares(lambda2X,normaY);
+            lambda2 = MyMath.ordLeastSquares(lambdaX,lambdaY);
         }catch (RuntimeException e){
             e.printStackTrace();
             return;
         }
-
         count = 0;
         currentX = 1;
         for (int j=0;j<(powerX2+1)*sizeX2;j++){
@@ -172,7 +177,7 @@ public class Solution implements Runnable {
         currentX = sizeX1+sizeX2;
         for (int i=0;i<matrixToOls.length;i++){
             for (int j=0;j<(powerX3+1)*sizeX3;j++){
-                matrixToOls[i][j] = Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX),count);
+                matrixToOls[i][j] = Math.log(1+Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX),count));
                 count++;
                 if (count == interval) {
                     count = 0;
@@ -181,19 +186,13 @@ public class Solution implements Runnable {
             }
             currentX = sizeX1+sizeX2;
         }
-        Matrix lambda3X = new Matrix(matrixToOls);
-        for (int i=0;i<lambda3X.getRowDimension();i++){
-            lambda3X.set(i,0,lambda3X.get(i,0)+1e-7);
-            lambda3X.set(i,4,lambda3X.get(i,4)+2e-7);
-        }
+        lambdaX = new Matrix(matrixToOls);
         try {
-            lambda3 = MyMath.ordLeastSquares(lambda3X,normaY);
+            lambda3 = MyMath.ordLeastSquares(lambdaX,lambdaY);
         }catch (RuntimeException e){
             e.printStackTrace();
             return;
         }
-
-
         count = 0;
         currentX = 1;
         for (int j=0;j<(powerX3+1)*sizeX3;j++){
@@ -203,7 +202,6 @@ public class Solution implements Runnable {
                 currentX++;
             }
         }
-
         //Нахождение пси
         //1
         double[][] psi1 = new double[normaX.getRowDimension()][sizeX1];
@@ -211,14 +209,18 @@ public class Solution implements Runnable {
         currentX = 0;
         count = 0;
         int currentX2 = 0;
+        double powerExp = 0.0;
+
         for (int i=0;i<normaX.getRowDimension();i++){
             for (int j=0;j<(powerX1+1)*sizeX1;j++){
-                psi1[i][currentX] += lambda1.get(j,0)*Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX2),count);
+                powerExp += lambda1.get(j,0)*Math.log(1.0+Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX2),count));
                 count++;
                 if (count == interval) {
+                    psi1[i][currentX] = Math.pow(Math.E,powerExp)-1.0;
                     count = 0;
                     currentX++;
                     currentX2++;
+                    powerExp = 0.0;
                 }
             }
             currentX = 0;
@@ -231,14 +233,17 @@ public class Solution implements Runnable {
         currentX = 0;
         count = 0;
         currentX2 = sizeX1;
+        powerExp = 0.0;
         for (int i=0;i<normaX.getRowDimension();i++){
             for (int j=0;j<(powerX2+1)*sizeX2;j++){
-                psi2[i][currentX] += lambda2.get(j,0)*Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX2),count);
+                powerExp += lambda2.get(j,0)*Math.log(1.0+Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX2),count));
                 count++;
                 if (count == interval) {
+                    psi2[i][currentX] = Math.pow(Math.E,powerExp)-1.0;
                     count = 0;
                     currentX++;
                     currentX2++;
+                    powerExp = 0.0;
                 }
             }
             currentX = 0;
@@ -251,14 +256,17 @@ public class Solution implements Runnable {
         currentX = 0;
         count = 0;
         currentX2 = sizeX1+sizeX2;
+        powerExp = 0.0;
         for (int i=0;i<normaX.getRowDimension();i++){
             for (int j=0;j<(powerX3+1)*sizeX3;j++){
-                psi3[i][currentX] += lambda3.get(j,0)*Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX2),count);
+                powerExp +=lambda3.get(j,0)*Math.log(1.0+Polinomials.countPolinomValue(polinomType,normaX.get(i,currentX2),count));
                 count++;
                 if (count == interval) {
+                    psi3[i][currentX] = Math.pow(Math.E,powerExp)-1.0;
                     count = 0;
                     currentX++;
                     currentX2++;
+                    powerExp = 0.0;
                 }
             }
             currentX = 0;
@@ -270,8 +278,14 @@ public class Solution implements Runnable {
         //1
         Matrix a1;
         Matrix matrixPsi1 = new Matrix(psi1);
+        Matrix modifyPSI = new Matrix(matrixPsi1.getRowDimension(),matrixPsi1.getColumnDimension());
+        for (int i=0;i<modifyPSI.getRowDimension();i++){
+            for (int j=0;j<modifyPSI.getColumnDimension();j++){
+                modifyPSI.set(i,j,Math.log(1.0+matrixPsi1.get(i,j)));
+            }
+        }
         try {
-            a1 = MyMath.ordLeastSquares(matrixPsi1,normaY);
+            a1 = MyMath.ordLeastSquares(modifyPSI,lambdaY);
         }catch (RuntimeException e){
             e.printStackTrace();
             return;
@@ -281,8 +295,14 @@ public class Solution implements Runnable {
         //2
         Matrix a2;
         Matrix matrixPsi2 = new Matrix(psi2);
+        modifyPSI = new Matrix(matrixPsi2.getRowDimension(),matrixPsi2.getColumnDimension());
+        for (int i=0;i<modifyPSI.getRowDimension();i++){
+            for (int j=0;j<modifyPSI.getColumnDimension();j++){
+                modifyPSI.set(i,j,Math.log(1.0+matrixPsi2.get(i,j)));
+            }
+        }
         try {
-            a2 = MyMath.ordLeastSquares(matrixPsi2,normaY);
+            a2 = MyMath.ordLeastSquares(modifyPSI,lambdaY);
         }catch (RuntimeException e){
             return;
         }
@@ -291,8 +311,14 @@ public class Solution implements Runnable {
         //3
         Matrix a3;
         Matrix matrixPsi3 = new Matrix(psi3);
+        modifyPSI = new Matrix(matrixPsi3.getRowDimension(),matrixPsi3.getColumnDimension());
+        for (int i=0;i<modifyPSI.getRowDimension();i++){
+            for (int j=0;j<modifyPSI.getColumnDimension();j++){
+                modifyPSI.set(i,j,Math.log(1.0+matrixPsi3.get(i,j)));
+            }
+        }
         try {
-            a3 = MyMath.ordLeastSquares(matrixPsi3,normaY);
+            a3 = MyMath.ordLeastSquares(modifyPSI,lambdaY);
         }catch (RuntimeException e){
             e.printStackTrace();
             return;
@@ -302,11 +328,16 @@ public class Solution implements Runnable {
 
         double[][] allF = new double[normaX.getRowDimension()][3];
         //1
+
         double[] f1 = new double[normaX.getRowDimension()];
+        powerExp = 0.0;
         for (int i=0;i<normaX.getRowDimension();i++){
             for (int j=0;j<a1.getRowDimension();j++){
-                f1[i] += a1.get(j,0)*matrixPsi1.get(i,j);
+                //f1[i] += a1.get(j,0)*matrixPsi1.get(i,j);
+                powerExp += a1.get(j,0)*Math.log(1.0+matrixPsi1.get(i,j));
             }
+            f1[i] = Math.pow(Math.E,powerExp)-1.0;
+            powerExp = 0.0;
         }
         for (int k=0;k<normaX.getRowDimension();k++)
             allF[k][0] = f1[k];
@@ -314,10 +345,14 @@ public class Solution implements Runnable {
 
         //2
         double[] f2 = new double[normaX.getRowDimension()];
+        powerExp = 0.0;
         for (int i=0;i<normaX.getRowDimension();i++){
             for (int j=0;j<a2.getRowDimension();j++){
-                f2[i] += a2.get(j,0)*matrixPsi2.get(i,j);
+                //f2[i] += a2.get(j,0)*matrixPsi2.get(i,j);
+                powerExp += a2.get(j,0)*Math.log(1.0+matrixPsi2.get(i,j));
             }
+            f2[i] = Math.pow(Math.E,powerExp)-1.0;
+            powerExp = 0.0;
         }
         for (int k=0;k<normaX.getRowDimension();k++)
             allF[k][1] = f2[k];
@@ -325,10 +360,14 @@ public class Solution implements Runnable {
 
         //3
         double[] f3 = new double[normaX.getRowDimension()];
+        powerExp = 0.0;
         for (int i=0;i<normaX.getRowDimension();i++){
             for (int j=0;j<a3.getRowDimension();j++){
-                f3[i] += a3.get(j,0)*matrixPsi3.get(i,j);
+                //f3[i] += a3.get(j,0)*matrixPsi3.get(i,j);
+                powerExp += a3.get(j,0)*Math.log(1.0+matrixPsi3.get(i,j));
             }
+            f3[i] = Math.pow(Math.E,powerExp)-1.0;
+            powerExp = 0.0;
         }
         for (int k=0;k<normaX.getRowDimension();k++)
             allF[k][2] = f3[k];
@@ -338,47 +377,33 @@ public class Solution implements Runnable {
         //1
         Matrix c;
         Matrix matrixAllF = new Matrix(allF);
+        Matrix matrixAllModify = new Matrix(matrixAllF.getRowDimension(),matrixAllF.getColumnDimension());
+        for (int i=0;i<matrixAllModify.getRowDimension();i++){
+            for (int j=0;j<matrixAllModify.getColumnDimension();j++){
+                matrixAllModify.set(i,j,Math.log(matrixAllF.get(i,j)+1.0));
+            }
+        }
         try {
-            c = MyMath.ordLeastSquares(matrixAllF,normaY);
+            c = MyMath.ordLeastSquares(matrixAllModify,lambdaY);
         }catch (RuntimeException e){
             e.printStackTrace();
             return;
         }
 
-        Matrix yiq1 = new Matrix(matrixPsi1.getRowDimension(),1);
-        for (int i=0;i<matrixPsi1.getRowDimension();i++){
-            double sum = 0.0;
-            for (int j=0;j<matrixPsi1.getColumnDimension();j++){
-                sum+=a1.get(j,0)*matrixPsi1.get(i,j);
+        findFnorma = new Matrix(matrixAllF.getRowDimension(),1);
+        powerExp = 0.0;
+        for (int i=0;i<matrixAllF.getRowDimension();i++){
+            for (int j=0;j<c.getRowDimension();j++){
+               powerExp += c.get(j,0)*Math.log(1.0+matrixAllF.get(i,j));
             }
-            yiq1.set(i,0,sum);
+            findFnorma.set(i,0,Math.pow(Math.E,powerExp)-1.0);
+            powerExp = 0.0;
         }
-        Matrix yiq2 = new Matrix(matrixPsi2.getRowDimension(),1);
-        for (int i=0;i<matrixPsi2.getRowDimension();i++){
-            double sum = 0.0;
-            for (int j=0;j<matrixPsi2.getColumnDimension();j++){
-                sum+=a2.get(j,0)*matrixPsi2.get(i,j);
-            }
-            yiq2.set(i,0,sum);
+        findForiginal = new Matrix(matrixAllF.getRowDimension(),1);
+
+        for (int i=0;i<findForiginal.getRowDimension();i++){
+            findForiginal.set(i,0,findFnorma.get(i,0)*(MyMath.maxValue(originalY)-MyMath.minValue(originalY))+ MyMath.minValue(originalY));
         }
-        Matrix yiq3 = new Matrix(matrixPsi3.getRowDimension(),1);
-        for (int i=0;i<matrixPsi3.getRowDimension();i++){
-            double sum = 0.0;
-            for (int j=0;j<matrixPsi3.getColumnDimension();j++){
-                sum+=a3.get(j,0)*matrixPsi3.get(i,j);
-            }
-            yiq3.set(i,0,sum);
-        }
-        Matrix findFiNorma = new Matrix(yiq1.getRowDimension(),1);
-        Matrix findFi = new Matrix(yiq1.getRowDimension(),1);
-        for (int i=0;i<findFiNorma.getRowDimension();i++){
-            findFiNorma.set(i,0,c.get(0,0)*yiq1.get(i,0)+c.get(1,0)*yiq2.get(i,0)+c.get(2,0)*yiq3.get(i,0));
-        }
-        for (int i=0;i<findFi.getRowDimension();i++){
-            findFi.set(i,0,findFiNorma.get(i,0)*(MyMath.maxValue(originalY)-MyMath.minValue(originalY))+ MyMath.minValue(originalY));
-        }
-        findFnorma = findFiNorma;
-        findForiginal = findFi;
 
         //Вывод
         if (flag&&a1!=null&&a2!=null&&a3!=null&&c!=null){
@@ -439,124 +464,88 @@ public class Solution implements Runnable {
                 sbForInterimResult.append(c.get(i,0)+"      ");
             }
             sbForInterimResult.append("\n---------------------------------------------------------------------------------------------------------");
-            sbForInterimResult.append("\n\nФ"+(yi+1)+"(x1,x2,x3) = "+c.get(0,0)+"Ф1'(x1'[q]) + " + c.get(1,0)+ "Ф2'(x2'[q]) + " +c.get(2,0)+"Ф3'(x3'[q])");
-            sbForInterimResult.append("\n\nФ1'(x1'[q]) = ");
+            //Формируем "ПСИ" на вывод
+            //1
+            sbForInterimResult.append("\n\nТретій рівень:");
+            int slip = 0;
+            sbForInterimResult.append("\n");
+            for (int j=0;j<matrixPsi1.getColumnDimension();j++){
+                sbForInterimResult.append("\n[1+psi1"+(j+1)+"(x1"+(j+1)+")] = ");
+                for (int i=0;i<powerX1+1;i++){
+                    if (i!=powerX1)
+                        sbForInterimResult.append("[1+FI"+i+j+"(x1"+(j+1)+")]^("+lambda1.get(slip+i,0)+")+");
+                    else
+                        sbForInterimResult.append("[1+FI"+i+j+"(x1"+(j+1)+")]^("+lambda1.get(slip+i,0)+")");
+                }
+                slip += powerX1+1;
+            }
+            //2
+            slip = 0;
+            sbForInterimResult.append("\n");
+            for (int j=0;j<matrixPsi2.getColumnDimension();j++){
+                sbForInterimResult.append("\n[1+psi2"+(j+1)+"(x2"+(j+1)+")] = ");
+                for (int i=0;i<powerX2+1;i++){
+                    if (i!=powerX2)
+                        sbForInterimResult.append("[1+FI"+i+j+"(x2"+(j+1)+")]^("+lambda2.get(slip+i,0)+")+");
+                    else
+                        sbForInterimResult.append("[1+FI"+i+j+"(x2"+(j+1)+")]^("+lambda2.get(slip+i,0)+")");
+                }
+                slip += powerX2+1;
+            }
+            //3
+            slip = 0;
+            sbForInterimResult.append("\n");
+            for (int j=0;j<matrixPsi3.getColumnDimension();j++){
+                sbForInterimResult.append("\n[1+psi3"+(j+1)+"(x3"+(j+1)+")] = ");
+                for (int i=0;i<powerX3+1;i++){
+                    if (i!=powerX3)
+                        sbForInterimResult.append("[1+FI"+i+j+"(x3"+(j+1)+")]^("+lambda3.get(slip+i,0)+")+");
+                    else
+                        sbForInterimResult.append("[1+FI"+i+j+"(x3"+(j+1)+")]^("+lambda3.get(slip+i,0)+")");
+                }
+                slip += powerX3+1;
+            }
+
+            //Формируем "Фik" на вывод
+            //1
+            sbForInterimResult.append("\n\nДругий рівень:");
+            sbForInterimResult.append("\n");
+            sbForInterimResult.append("\n[1+Ф1'"+"(x1)] = ");
             for (int i=0;i<a1.getRowDimension();i++){
-                if (i==a1.getRowDimension()-1)
-                    sbForInterimResult.append(a1.get(i,0)+"psi1(x1"+i+"[q])");
+                if (i!=a1.getRowDimension()-1)
+                    sbForInterimResult.append("[1+psi1"+(i+1)+"(x1"+(i+1)+")]^("+a1.get(i,0)+")+");
                 else
-                    sbForInterimResult.append(a1.get(i,0)+"psi1(x1"+i+"[q]) + ");
+                    sbForInterimResult.append("[1+psi1"+(i+1)+"(x1"+(i+1)+")]^("+a1.get(i,0)+")");
             }
-            sbForInterimResult.append("\nФ2'(x2'[q]) = ");
+            //2
+            sbForInterimResult.append("\n[1+Ф2'"+"(x2)] = ");
             for (int i=0;i<a2.getRowDimension();i++){
-                if (i==a2.getRowDimension()-1)
-                    sbForInterimResult.append(a2.get(i,0)+"psi2(x2"+i+"[q])");
+                if (i!=a2.getRowDimension()-1)
+                    sbForInterimResult.append("[1+psi2"+(i+1)+"(x2"+(i+1)+")]^("+a2.get(i,0)+")+");
                 else
-                    sbForInterimResult.append(a2.get(i,0)+"psi2(x2"+i+"[q]) + ");
+                    sbForInterimResult.append("[1+psi2"+(i+1)+"(x2"+(i+1)+")]^("+a2.get(i,0)+")");
             }
-            sbForInterimResult.append("\nФ3'(x3'[q]) = ");
+            //3
+            sbForInterimResult.append("\n[1+Ф3'"+"(x3)] = ");
             for (int i=0;i<a3.getRowDimension();i++){
-                if (i==a3.getRowDimension()-1)
-                    sbForInterimResult.append(a3.get(i,0)+"psi3(x3"+i+"[q])");
+                if (i!=a3.getRowDimension()-1)
+                    sbForInterimResult.append("[1+psi3"+(i+1)+"(x3"+(i+1)+")]^("+a3.get(i,0)+")+");
                 else
-                    sbForInterimResult.append(a3.get(i,0)+"psi3(x3"+i+"[q]) + ");
+                    sbForInterimResult.append("[1+psi3"+(i+1)+"(x3"+(i+1)+")]^("+a3.get(i,0)+")");
             }
 
-            sbForInterimResult.append("\n\npsi1(x1'[q]) = ");
-            int k=1;
-            int power = 0;
-            for (int i=0;i<k*(powerX1+1);i++){
-                if (i<lambda1.getRowDimension()-1) {
-                    sbForInterimResult.append(lambda1.get(i, 0) + "T"+(power++)+"'(x1" + (k - 1) + ") + ");
-                }
+            //Формируем Ф на вывод
+            sbForInterimResult.append("\n\nПерший рівень:");
+            sbForInterimResult.append("\n\n[1+Ф(x)] = ");
+            for (int i=0;i<c.getRowDimension();i++){
+                if (i!=c.getRowDimension()-1)
+                    sbForInterimResult.append("[1+Ф"+(i+1)+"'(x"+(i+1)+")]^("+(c.get(i,0))+")+");
                 else
-                    sbForInterimResult.append(lambda1.get(i,0)+"T"+(power++)+"'(x1"+(k-1)+")");
-                if ((i==k*(powerX1+1)-1)&&(i!=lambda1.getRowDimension()-1)) {
-                    k++;
-                    power = 0;
-                    sbForInterimResult.append("\n");
-                }
+                    sbForInterimResult.append("[1+Ф"+(i+1)+"'(x"+(i+1)+")]^("+(c.get(i,0))+")");
             }
-            sbForInterimResult.append("\n\npsi2(x2'[q]) = ");
-            k=1;
-            power = 0;
-            for (int i=0;i<k*(powerX2+1);i++){
-                if (i<lambda2.getRowDimension()-1) {
-                    sbForInterimResult.append(lambda2.get(i, 0) + "T"+(power++)+"'(x2" + (k - 1) + ") + ");
-                }
-                else
-                    sbForInterimResult.append(lambda2.get(i,0)+"T"+(power++)+"'(x2"+(k-1)+")");
-                if ((i==k*(powerX2+1)-1)&&(i!=lambda2.getRowDimension()-1)) {
-                    k++;
-                    power = 0;
-                    sbForInterimResult.append("\n");
-                }
-            }
-            sbForInterimResult.append("\n\npsi3(x3'[q]) = ");
-            k=1;
-            power = 0;
-            for (int i=0;i<k*(powerX3+1);i++){
-                if (i<lambda3.getRowDimension()-1) {
-                    sbForInterimResult.append(lambda3.get(i, 0) + "T"+(power++)+"'(x3" + (k - 1) + ") + ");
-                }
-                else
-                    sbForInterimResult.append(lambda3.get(i,0)+"T"+(power++)+"'(x3"+(k-1)+")");
-                if ((i==k*(powerX3+1)-1)&&(i!=lambda3.getRowDimension()-1)) {
-                    k++;
-                    power = 0;
-                    sbForInterimResult.append("\n");
-                }
-            }
+
+            //Формировка оценки качества модели
             sbForInterimResult.append("\n---------------------------------------------------------------------------------------------------------");
-
-            String type = "";
-            switch (polinomType){
-                case 1: type = "Чебишева";
-                        break;
-                case 2: type = "Лежандра";
-                        break;
-                case 3: type = "Лагера";
-                        break;
-                case 4: type = "Ерміта";
-                        break;
-            }
-            sbForInterimResult.append("\n\nФункція виражена через поліноми "+type+":\nФ"+(yi+1)+"(x1,x2,x3) = ");
-            count = 0;
-            currentX = 1;
-            interval = powerX1 + 1;
-            for (int i=0;i<lambda1.getRowDimension();i++){
-                sbForInterimResult.append("("+lambda1.get(i,0)+")"+"T"+count+"(x1"+currentX+") + ");
-                count++;
-                if (count == interval) {
-                    count = 0;
-                    currentX++;
-                    sbForInterimResult.append("\n");
-                }
-            }
-            count = 0;
-            currentX = 1;
-            interval = powerX2 + 1;
-            for (int i=0;i<lambda2.getRowDimension();i++){
-                sbForInterimResult.append(" + ("+lambda2.get(i,0)+")"+"T"+count+"(x2"+currentX+")");
-                count++;
-                if (count == interval) {
-                    count = 0;
-                    currentX++;
-                    sbForInterimResult.append("\n");
-                }
-            }
-            count = 0;
-            currentX = 1;
-            interval = powerX3 + 1;
-            for (int i=0;i<lambda3.getRowDimension();i++){
-                sbForInterimResult.append(" + ("+lambda3.get(i,0)+")"+"T"+count+"(x3"+currentX+")");
-                count++;
-                if (count == interval) {
-                    count = 0;
-                    currentX++;
-                    sbForInterimResult.append("\n");
-                }
-            }
             sbForInterimResult.append("\n\n[Оригінальний у  |   Знайдений у |   Нев'зка |   Оригінальний нормований у   |   Знайденний нормований у |   Нев'язка]\n");
             for (int i=0;i<findForiginal.getRowDimension();i++){
                 sbForInterimResult.append(originalY.get(i,0)+"  |   "+findForiginal.get(i,0)+"  |   "+Math.abs(originalY.get(i,0)-findForiginal.get(i,0))+
@@ -564,7 +553,7 @@ public class Solution implements Runnable {
                 sbForInterimResult.append("\n");
             }
             sbForInterimResult.append("\nМаксимальна похибка: "+MyMath.maxValue(originalY.minus(findForiginal)));
-            sbForInterimResult.append("\nМаксимальна похибка(нормована): "+MyMath.maxValue(normaY.minus(findFiNorma)));
+            sbForInterimResult.append("\nМаксимальна похибка(нормована): "+MyMath.maxValue(normaY.minus(findFnorma)));
             stringInterimResult = sbForInterimResult.toString();
         }
         Matrix errors = originalY.minus(findForiginal);

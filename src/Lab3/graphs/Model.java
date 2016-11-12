@@ -1,6 +1,6 @@
-package Lab2.graphs;
+package Lab3.graphs;
 
-import Lab2.Solution;
+import Lab3.Solution;
 
 /**
  * Created by andrejbojcuk on 18.04.16.

@@ -1,8 +1,6 @@
-package Lab2;
+package Lab3;
 
-import Jama.Matrix;
-
-import Lab2.graphs.CreateGraphs;
+import Lab3.graphs.CreateGraphs;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -42,7 +40,7 @@ public class Controller {
     @FXML
     Button chooiseInputData2;
     @FXML
-    RadioButton chebisheva;
+    RadioButton ownVersion;
     @FXML
     RadioButton lezhandra;
     @FXML
@@ -80,11 +78,11 @@ public class Controller {
 
     @FXML
     public void initialize() {
-        chebisheva.setToggleGroup(polinomGroup);
+        ownVersion.setToggleGroup(polinomGroup);
         lezhandra.setToggleGroup(polinomGroup);
         laggera.setToggleGroup(polinomGroup);
         ermita.setToggleGroup(polinomGroup);
-        polinomGroup.selectToggle(chebisheva);
+        polinomGroup.selectToggle(laggera);
         ArrayList<Integer> list = new ArrayList<>();
         ArrayList<Integer> list2 = new ArrayList<>();
         for (int i = 1; i <= 100; i++)
@@ -119,9 +117,9 @@ public class Controller {
         powerX3.setItems(FXCollections.observableList(list2));
         powerX3.setValue(3);
         sizeY.setItems(oList2);
-        sizeY.setValue(1);
+        sizeY.setValue(4);
         sampleSize.setItems(FXCollections.observableList(list));
-        sampleSize.setValue(30);
+        sampleSize.setValue(45);
         lambda.setSelected(true);
         configCurrentY();
         currentY.setValue(1);

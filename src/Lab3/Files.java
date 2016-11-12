@@ -1,9 +1,7 @@
-package Lab2;
+package Lab3;
 
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 /**
  * Created by valeriy on 21.10.16.

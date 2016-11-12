@@ -1,6 +1,6 @@
-package Lab2.graphs;
+package Lab3.graphs;
 
-import Lab2.Solution;
+import Lab3.Solution;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;

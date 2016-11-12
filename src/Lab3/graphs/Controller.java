@@ -1,4 +1,4 @@
-package Lab2.graphs;
+package Lab3.graphs;
 
 
 import javafx.collections.FXCollections;
